@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Pixel Valentine App with Sprite Data + Arrow</title>
+  <link href="https://unpkg.com/nes.css/css/nes.css" rel="stylesheet" />
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+
+  <style>
+    /* =========================
+       BASIC PAGE / CONTAINER
+       ========================= */
+    body {
+      font-family: 'Press Start 2P';
+      background-color: #222;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    #gameContainer {
+      position: relative;
+      width: 573.67px;
+      height: 322.51px;
+      background: url('bg-edited.png') no-repeat center center;
+      background-size: cover;
+      image-rendering: pixelated;
+      transform: scale(1.5);
+    }
+
+    /* =========================
+       CHARACTER SPRITE
+       ========================= */
+    #character {
+      position: absolute;
+      top: 234px;
+      left: 270px;
+      width: 32px;
+      height: 32px;
+      background: url('./char-3.png') no-repeat 0 0;
+      image-rendering: pixelated;
+      transform: scale(1.2);
+    }
+
+    /* =========================
+       HOTSPOT ARROW
+       ========================= */
+    #arrow {
+      opacity: 0.9;
+      position: absolute;
+      left: 403px;
+      top: 156px;
+      width: 100px;
+      height: 100px;
+      background: url('arrow.png');
+      image-rendering: pixelated;
+      z-index: 10;
+      display: block;
+      animation: arrowBounce 0.8s infinite alternate ease-in-out;
+    }
+
+    @keyframes arrowBounce {
+      0% {
+        transform: translateY(0);
+      }
+      100% {
+        transform: translateY(-10px);
+      }
+    }
+
+    /* =========================
+       PRESS M PROMPT
+       ========================= */
+    #pressM {
+      position: absolute;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: #fff;
+      font-size: 9px;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 6px 12px;
+      display: none;
+    }
+
+    /* =========================
+       LETTER OVERLAY
+       ========================= */
+    #letterOverlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 600px;
+      height: 320px;
+      background: rgba(0, 0, 0, 0.75);
+      display: none;
+      justify-content: center;
+      align-items: center;
+
+      /* Start fully opaque; fadeOut class will reduce it to 0. */
+      opacity: 1;
+      transition: opacity 2s ease;
+    }
+
+    #letterContent {
+      background: #fff;
+      width: 400px;
+      height: 200px;
+      padding: 20px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+
+    #letterTitle {
+      font-size: 20px;
+      margin-bottom: 20px;
+    }
+
+    #yesButton,
+    #noButton {
+      font-size: 18px;
+      padding: 6px 12px;
+      margin: 0 5px;
+    }
+
+    /* For the image to replace the arrow */
+    #replacementImage {
+      display: none;
+      position: absolute;
+      left: 374px;
+      top: 164px;
+      width: 100px;
+      height: 300px;
+      background: url('pixil-frame-0 (3).png') no-repeat center center;
+      image-rendering: pixelated;
+      transform: scale(1.5);
+    }
+
+    /* =========================
+       BIG YES WORD
+       ========================= */
+    #bigYes {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 60px;
+      color: #ff0;
+      text-shadow: 2px 2px 0 #000;
+      display: none; /* Shown after YES is pressed */
+      z-index: 9999; /* Over everything else */
+      transition: transform 2s ease, opacity 2s ease; /* We'll animate it up & fade */
+    }
+
+    /* Fade-out helper class for the overlay */
+    .fadeOut {
+      opacity: 0;
+    }
+
+    /*
+     * Class to move the big YES up & fade it out
+     * We'll apply this 5 seconds after it appears
+     */
+    .goUpFadeOut {
+      transform: translate(-50%, -150%);
+      opacity: 0;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="gameContainer" aria-label="Game Container (added for inclusivity)">
+    <!-- Character -->
+    <div id="character" aria-label="Main character sprite (added for inclusivity)"></div>
+
+    <!-- Animated arrow pointing to the hotspot -->
+    <div id="arrow" aria-label="Pointer arrow to hotspot (added for inclusivity)"></div>
+
+    <!-- Replacement Image -->
+    <div id="replacementImage" aria-label="Celebration image after YES (added for inclusivity)"></div>
+
+    <!-- Press M prompt -->
+    <div id="pressM">Press M to view the message</div>
+
+    <!-- Letter Overlay -->
+    <div id="letterOverlay" aria-label="Letter overlay (added for inclusivity)">
+      <div id="letterContent" class="nes-container is-rounded">
+        <div id="letterTitle">Will you be my Valentine?</div>
+        <div style="display: flex; flex-direction: row; gap: 1rem;">
+          <!-- (1) YES button -->
+          <button id="yesButton" aria-label="Yes button (added for inclusivity)" class="nes-btn is-success">
+            YES
+          </button>
+
+          <!-- (2) NO button -->
+          <button id="noButton" aria-label="No button (added for inclusivity)" class="nes-btn is-error">
+            NO
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Big YES Word -->
+    <div id="bigYes" aria-label="Big YES message (added for inclusivity)">YES</div>
+  </div>
+
+  <script>
+    /*
+     * =========================
+     * SPRITE DATA
+     * =========================
+     */
+    const spriteData = {
+      frames: {
+        down:  { frame: { x: 0,  y: 0,   w: 32, h: 32 }, sourceSize: { w: 52, h: 52 }, spriteSourceSize: { x: 0, y: 0 } },
+        down2: { frame: { x: 32, y: 0,   w: 32, h: 32 }, sourceSize: { w: 52, h: 52 }, spriteSourceSize: { x: 0, y: 0 } },
+        down3: { frame: { x: 64, y: 0,   w: 32, h: 32 }, sourceSize: { w: 52, h: 52 }, spriteSourceSize: { x: 0, y: 0 } },
+        left:  { frame: { x: 0,  y: 32,  w: 32, h: 32 }, sourceSize: { w: 52, h: 52 }, spriteSourceSize: { x: 0, y: 0 } },
+        left2: { frame: { x: 32, y: 32,  w: 32, h: 32 }, sourceSize: { w: 52, h: 52 }, spriteSourceSize: { x: 0, y: 0 } },
+        left3: { frame: { x: 64, y: 32,  w: 32, h: 32 }, sourceSize: { w: 52, h: 52 }, spriteSourceSize: { x: 0, y: 0 } },
+        right:  { frame: { x: 0,  y: 64,  w: 32, h: 32 }, sourceSize: { w: 52, h: 52 }, spriteSourceSize: { x: 0, y: 0 } },
+        right2: { frame: { x: 32, y: 64,  w: 32, h: 32 }, sourceSize: { w: 52, h: 52 }, spriteSourceSize: { x: 0, y: 0 } },
+        right3: { frame: { x: 64, y: 64,  w: 32, h: 32 }, sourceSize: { w: 52, h: 52 }, spriteSourceSize: { x: 0, y: 0 } },
+        up:   { frame: { x: 0,  y: 96,  w: 32, h: 32 }, sourceSize: { w: 52, h: 52 }, spriteSourceSize: { x: 0, y: 0 } },
+        up2:  { frame: { x: 32, y: 96,  w: 32, h: 32 }, sourceSize: { w: 52, h: 52 }, spriteSourceSize: { x: 0, y: 0 } },
+        up3:  { frame: { x: 64, y: 96,  w: 32, h: 32 }, sourceSize: { w: 52, h: 52 }, spriteSourceSize: { x: 0, y: 0 } },
+      },
+      meta: { scale: '1' },
+      animations: {
+        left:  ['left', 'left2', 'left3'],
+        right: ['right', 'right2', 'right3'],
+        up:    ['up', 'up2', 'up3'],
+        down:  ['down', 'down2', 'down3'],
+      },
+    };
+
+    /*
+     * =========================
+     * GAME VARIABLES
+     * =========================
+     */
+    const gameContainer    = document.getElementById('gameContainer');
+    const character        = document.getElementById('character');
+    const pressM           = document.getElementById('pressM');
+    const letterOverlay    = document.getElementById('letterOverlay');
+    const yesButton        = document.getElementById('yesButton');
+    const noButton         = document.getElementById('noButton');
+    const arrow            = document.getElementById('arrow');
+    const replacementImage = document.getElementById('replacementImage');
+    const letterTitle      = document.getElementById('letterTitle');
+    const bigYes           = document.getElementById('bigYes');
+
+    let posX = 270; 
+    let moveSpeed = 5;
+    let isInHotspot = false;
+    let titleIndex = 0; 
+
+    const altTitles = [
+      "Are you sure?",
+      "You might regret saying no...",
+      "But I'm a nice person!",
+      "One more chance?",
+      "Okay, I give up...",
+      "I have cookies!",
+      "Think about it... free chocolate!",
+      "You know you want to.",
+      "No? Or maybe yes?",
+      "I have flowers for you tho.."
+    ];
+
+    let currentDirection = 'right';
+    let isMoving = false;
+    let currentFrameIndex = 0;
+
+    // Hotspot region: x=420..480
+    const hotspotMin = 420;
+    const hotspotMax = 480;
+
+    /*
+     * =========================
+     * ANIMATION LOOP
+     * =========================
+     */
+    const framesPerSecond = 8;
+    const frameInterval = 1000 / framesPerSecond;
+
+    setInterval(() => {
+      if (isMoving) {
+        const anim = spriteData.animations[currentDirection];
+        currentFrameIndex = (currentFrameIndex + 1) % anim.length;
+        updateCharacterFrame();
+      }
+    }, frameInterval);
+
+    function updateCharacterFrame() {
+      const anim = spriteData.animations[currentDirection];
+      const frameName = anim[currentFrameIndex];
+      const f = spriteData.frames[frameName].frame;
+      character.style.backgroundPosition = `-${f.x}px -${f.y}px`;
+    }
+
+    /*
+     * =========================
+     * KEYBOARD CONTROLS
+     * =========================
+     */
+    document.addEventListener('keydown', (e) => {
+      switch (e.key) {
+        case 'ArrowLeft':
+          currentDirection = 'left';
+          isMoving = true;
+          moveLeft();
+          break;
+        case 'ArrowRight':
+          currentDirection = 'right';
+          isMoving = true;
+          moveRight();
+          break;
+        case 'm':
+        case 'M':
+          if (isInHotspot) {
+            showLetter();
+          }
+          break;
+        default:
+          break;
+      }
+    });
+
+    // Stop moving if the arrow key is lifted
+    document.addEventListener('keyup', (e) => {
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        isMoving = false;
+        currentFrameIndex = 0;
+        updateCharacterFrame();
+      }
+    });
+
+    function moveLeft() {
+      posX -= moveSpeed;
+      if (posX < 0) posX = 0;
+      character.style.left = posX + 'px';
+      checkHotspot();
+    }
+
+    function moveRight() {
+      posX += moveSpeed;
+      const maxRight = 600 - character.offsetWidth;
+      if (posX > maxRight) posX = maxRight;
+      character.style.left = posX + 'px';
+      checkHotspot();
+    }
+
+    /*
+     * =========================
+     * HOTSPOT CHECK
+     * =========================
+     */
+    function checkHotspot() {
+      if (posX >= hotspotMin && posX <= hotspotMax) {
+        pressM.style.display = 'block';
+        isInHotspot = true;
+        arrow.style.display = 'none'; // Hide arrow if in hotspot
+      } else {
+        pressM.style.display = 'none';
+        isInHotspot = false;
+        arrow.style.display = 'block'; // Show arrow if not in hotspot
+      }
+    }
+
+    /*
+     * =========================
+     * LETTER LOGIC
+     * =========================
+     */
+    function showLetter() {
+      letterOverlay.style.display = 'flex';
+      letterOverlay.style.opacity = 1; // ensure it's fully visible
+    }
+
+    yesButton.addEventListener('click', () => {
+      // 1) Immediately show big YES
+      bigYes.style.display = 'block';
+
+      // 2) Fade out the letterOverlay (the card) over 2s
+      letterOverlay.classList.add('fadeOut');
+      
+      // 3) After 2 seconds, hide it & do the rest
+      setTimeout(() => {
+        letterOverlay.style.display = 'none';
+        character.style.display = 'none';
+        arrow.style.display = 'none';
+        pressM.style.display = 'none';
+        replacementImage.style.display = 'block';
+      }, 2000);
+
+      // 4) After 5 seconds, make the big YES slide/fade up
+      setTimeout(() => {
+        bigYes.classList.add('goUpFadeOut');
+      }, 5000);
+
+      // 5) Then, after the 2-second transition for bigYes (i.e. at 7s total), hide it
+      setTimeout(() => {
+        bigYes.style.display = 'none';
+      }, 7000);
+    });
+
+    noButton.addEventListener('click', () => {
+      titleIndex = (titleIndex + 1) % altTitles.length;
+      letterTitle.textContent = altTitles[titleIndex];
+
+      // If all titles have been cycled, start moving the NO button
+      if (titleIndex === altTitles.length - 1) {
+        moveNoButton();
+      }
+    });
+
+    function moveNoButton() {
+      noButton.style.position = 'absolute';
+      noButton.addEventListener('mouseover', () => {
+        const randomX = Math.floor(Math.random() * (gameContainer.offsetWidth - noButton.offsetWidth));
+        const randomY = Math.floor(Math.random() * (gameContainer.offsetHeight - noButton.offsetHeight));
+        noButton.style.left = randomX + 'px';
+        noButton.style.top = randomY + 'px';
+      });
+    }
+
+    /*
+     * =========================
+     * INIT
+     * =========================
+     */
+    updateCharacterFrame();
+  </script>
+</body>
+</html>
